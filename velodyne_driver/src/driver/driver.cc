@@ -20,6 +20,7 @@
 #include <velodyne_msgs/VelodyneScan.h>
 
 #include "driver.h"
+#include <angles/angles.h>
 
 namespace velodyne_driver
 {
@@ -138,24 +139,32 @@ bool VelodyneDriver::poll(void)
 {
   // Allocate a new shared pointer for zero-copy sharing with other nodelets.
   velodyne_msgs::VelodyneScanPtr scan(new velodyne_msgs::VelodyneScan);
-  scan->packets.resize(config_.npackets);
+  //scan->packets.resize(config_.npackets);
 
   // Since the velodyne delivers data at a very high rate, keep
   // reading and publishing scans as fast as possible.
-  for (int i = 0; i < config_.npackets; ++i)
+  float rotation = -1.0, prev_rotation = -1.0;
+  bool scan_complete = false;
+  while (!scan_complete && ros::ok())
     {
-      while (true)
-        {
-          // keep reading until full packet received
-          int rc = input_->getPacket(&scan->packets[i], config_.time_offset);
-          if (rc == 0) break;       // got a full packet?
-          if (rc < 0) return false; // end of file reached?
-        }
+      velodyne_msgs::VelodynePacket pack;
+      while (ros::ok())
+      {
+        // keep reading until full packet received
+        int rc = input_->getPacket(&pack, config_.time_offset);
+        scan->packets.push_back(pack);
+        if (rc == 0) break;       // got a full packet?
+        if (rc < 0) return false; // end of file reached?
+      }
+      uint16_t angle = (pack.data[3] << 8) | pack.data[2];      ///< 3rd and 4th bytes are angles 0-35999, divide by 100 to get degrees
+      prev_rotation = rotation;
+      rotation = angles::from_degrees(ROTATION_RESOLUTION * angle);
+      scan_complete = (prev_rotation > 0 && prev_rotation <= 3.14 && rotation > 3.14);
     }
 
   // publish message using time of last packet read
   ROS_DEBUG("Publishing a full Velodyne scan.");
-  scan->header.stamp = scan->packets[config_.npackets - 1].stamp;
+  scan->header.stamp = scan->packets.back().stamp;
   scan->header.frame_id = config_.frame_id;
   output_.publish(scan);
 

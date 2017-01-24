@@ -39,7 +39,10 @@ public:
 
 private:
 
-  ///Callback for dynamic reconfigure
+  // Constant defined in the velodyne manual
+  static const float ROTATION_RESOLUTION = 0.01f; /**< degrees */
+
+    ///Callback for dynamic reconfigure
   void callback(velodyne_driver::VelodyneNodeConfig &config,
               uint32_t level);
 
