@@ -39,7 +39,7 @@ namespace velodyne_driver
     private_nh.param("pcap", dump_file, std::string(""));
     private_nh.param("port", udp_port, (int)UDP_PORT_NUMBER);
     private_nh.param("device_ip", devip, std::string(""));
-
+    private_nh.param("cutoff_angle", config_.cutoff_angle, M_PI);
     std::string tf_prefix = tf::getPrefixParam(private_nh);
     ROS_DEBUG_STREAM("tf_prefix: " << tf_prefix);
     config_.frame_id = tf::resolve(tf_prefix, config_.frame_id);
@@ -119,7 +119,10 @@ namespace velodyne_driver
       prev_rotation = rotation;
       rotation = angles::from_degrees(ROTATION_RESOLUTION * angle);
       // A rotation is complete when the angle in a packet crosses the cutoff threshold
-      scan_complete = (prev_rotation > 0 && prev_rotation <= 3.14 && rotation > 3.14);
+      scan_complete = (prev_rotation > 0 && prev_rotation <= config_.cutoff_angle && rotation > config_.cutoff_angle);
+
+      // The endpoints are special, detect an endpoint crossing
+      scan_complete |= (config_.cutoff_angle == 0.0 || config_.cutoff_angle == M_2_PI) && prev_rotation > M_PI && rotation < M_PI;
     }
 
     // publish message using time of last packet read

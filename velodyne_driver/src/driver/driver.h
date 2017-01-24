@@ -55,9 +55,9 @@ private:
   {
     std::string frame_id;            ///< tf frame ID
     std::string model;               ///< device model name
-    int    npackets;                 ///< number of packets to collect
     double rpm;                      ///< device rotation rate (RPMs)
     double time_offset;              ///< time in seconds added to each velodyne time stamp
+    double cutoff_angle;             ///< cutoff angle at which to begin a new scan
   } config_;
 
   boost::shared_ptr<Input> input_;
