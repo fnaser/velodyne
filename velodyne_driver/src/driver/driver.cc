@@ -111,6 +111,10 @@ namespace velodyne_driver
       {
         // keep reading until full packet received
         int rc = input_->getPacket(&pack, config_.time_offset);
+
+        //Add a check to avoid adding bad packets. The header bytes must be ffee or ffdd according to velodyne manual
+        if(pack.data[0] != 0xff || (pack.data[1] != 0xee && pack.data[1] != 0xdd)) continue;
+
         scan->packets.push_back(pack);
         if (rc == 0) break;       // got a full packet?
         if (rc < 0) return false; // end of file reached?
@@ -118,15 +122,17 @@ namespace velodyne_driver
       uint16_t angle = (pack.data[3] << 8) | pack.data[2];      ///< 3rd and 4th bytes are angles 0-35999, divide by 100 to get degrees
       prev_rotation = rotation;
       rotation = angles::from_degrees(ROTATION_RESOLUTION * angle);
+
       // A rotation is complete when the angle in a packet crosses the cutoff threshold
       scan_complete = (prev_rotation > 0 && prev_rotation <= config_.cutoff_angle && rotation > config_.cutoff_angle);
 
       // The endpoints are special, detect an endpoint crossing
       scan_complete |= (config_.cutoff_angle == 0.0 || config_.cutoff_angle == M_2_PI) && prev_rotation > M_PI && rotation < M_PI;
+      ROS_DEBUG_STREAM("Flag: " << unsigned(pack.data[0]) << " " << unsigned(pack.data[1]) <<" : Rotation: " << rotation << " : Cutoff Check: " << scan_complete);
     }
 
     // publish message using time of last packet read
-    ROS_DEBUG("Publishing a full Velodyne scan.");
+    ROS_DEBUG_STREAM("Publishing a full Velodyne scan with " << scan->packets.size() <<" points.");
     scan->header.stamp = scan->packets.back().stamp;
     scan->header.frame_id = config_.frame_id;
     output_.publish(scan);
