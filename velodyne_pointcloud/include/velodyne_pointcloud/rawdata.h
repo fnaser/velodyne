@@ -139,7 +139,8 @@ namespace velodyne_rawdata
     int setup(ros::NodeHandle private_nh);
 
     void unpack(const velodyne_msgs::VelodynePacket &pkt, VPointCloud &pc);
-    
+    void unpack(const velodyne_msgs::VelodynePacket &pkt, VPointCloud &pc_strong, VPointCloud &pc_last);
+
     void setParameters(double min_range, double max_range, double view_direction,
                        double view_width);
 
@@ -174,6 +175,9 @@ namespace velodyne_rawdata
       return (range >= config_.min_range
               && range <= config_.max_range);
     }
+
+    /** add private function to handle low-level unpacking task */
+    void unpack_one_point(int i, int k, uint8_t laser_number, const raw_packet_t *raw, VPoint &point);
   };
 
 } // namespace velodyne_rawdata

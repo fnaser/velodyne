@@ -48,6 +48,11 @@ namespace velodyne_pointcloud
     ros::Subscriber velodyne_scan_;
     ros::Publisher output_;
 
+    // For dual return mode
+    bool dual_return_mode_;
+    ros::Publisher output_strong;
+    ros::Publisher output_last;
+
     /// configuration parameters
     typedef struct {
       int npackets;                    ///< number of packets to combine
